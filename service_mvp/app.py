@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import subprocess
@@ -7,6 +8,7 @@ import sys
 from pathlib import Path
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 
 SERVICE_ROOT = Path(__file__).resolve().parent
@@ -130,6 +132,50 @@ def build_prompt(transcript_text: str) -> str:
     return f"{template.rstrip()}\n\n```text\n{transcript_text}\n```"
 
 
+def render_copy_button(text: str, label: str = "复制完整 Prompt") -> None:
+    text_json = json.dumps(text, ensure_ascii=False)
+    components.html(
+        f"""
+        <button id="copyPromptButton" style="
+            padding: 0.55rem 0.85rem;
+            border: 1px solid rgba(49, 51, 63, 0.2);
+            border-radius: 0.5rem;
+            background: #ffffff;
+            color: #111827;
+            cursor: pointer;
+            font-weight: 600;
+        ">{label}</button>
+        <span id="copyPromptStatus" style="margin-left: 0.75rem; color: #16a34a; font-size: 0.9rem;"></span>
+        <script>
+        const promptText = {text_json};
+        const button = document.getElementById("copyPromptButton");
+        const status = document.getElementById("copyPromptStatus");
+        button.addEventListener("click", async () => {{
+            try {{
+                await navigator.clipboard.writeText(promptText);
+                status.textContent = "已复制";
+            }} catch (error) {{
+                const textarea = document.createElement("textarea");
+                textarea.value = promptText;
+                textarea.style.position = "fixed";
+                textarea.style.opacity = "0";
+                document.body.appendChild(textarea);
+                textarea.focus();
+                textarea.select();
+                document.execCommand("copy");
+                document.body.removeChild(textarea);
+                status.textContent = "已复制";
+            }}
+            window.setTimeout(() => {{
+                status.textContent = "";
+            }}, 2200);
+        }});
+        </script>
+        """,
+        height=48,
+    )
+
+
 st.set_page_config(page_title="信息消化器接单操作台", page_icon="BP", layout="wide")
 
 st.title("信息消化器接单操作台")
@@ -222,6 +268,13 @@ st.subheader("4. 复制 Prompt 到 ChatGPT / Claude")
 if transcript_file.exists():
     transcript_text = transcript_file.read_text(encoding="utf-8", errors="ignore")
     complete_prompt = build_prompt(transcript_text)
+    render_copy_button(complete_prompt)
+    st.download_button(
+        "下载完整 Prompt.txt",
+        complete_prompt,
+        file_name=f"{case_id}_prompt.txt",
+        mime="text/plain",
+    )
     st.text_area("完整 Prompt", complete_prompt, height=360)
 else:
     st.write("生成 `transcript.txt` 后，这里会出现完整 Prompt。")

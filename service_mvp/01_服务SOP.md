@@ -106,6 +106,8 @@ C:\Users\Liang\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\p
 - 是否有明显幻觉。
 - 技术命令是否和原文一致。
 - 中文是否像学习笔记，而不是机器翻译。
+- `一句话总结` 是否不超过 60 个中文字符；如果超过，把长背景移到 `简短摘要`。
+- 是否是纯 Markdown；不要保留网页端复制出来的引用标号、脚注或奇怪标注。
 - 是否能直接保存到 Obsidian。
 
 ## 4. 质量评分
