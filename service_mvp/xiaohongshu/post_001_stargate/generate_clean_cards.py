@@ -7,6 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 OUT_DIR = Path(__file__).resolve().parent / "clean_cards"
 OUT_DIR_V2 = Path(__file__).resolve().parent / "clean_cards_v2"
+OUT_DIR_READY = Path(__file__).resolve().parent / "ready_to_post"
 W, H = 1242, 1660
 BG = "#fbfaf5"
 INK = "#3f3d3b"
@@ -15,8 +16,8 @@ LIGHT = "#f3ead8"
 YELLOW = "#f5df50"
 RED = "#ff2d55"
 
-FONT_BOLD = "C:/Windows/Fonts/simhei.ttf"
-FONT_REG = "C:/Windows/Fonts/Deng.ttf"
+FONT_BOLD = "C:/Windows/Fonts/msyhbd.ttc"
+FONT_REG = "C:/Windows/Fonts/msyh.ttc"
 
 
 def font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
@@ -45,9 +46,9 @@ def wrap_text(draw: ImageDraw.ImageDraw, text: str, fnt: ImageFont.FreeTypeFont,
 
 
 def draw_brand(draw: ImageDraw.ImageDraw, page: str) -> None:
-    draw.text((92, 86), "BytePulse｜海外AI笔记", font=font(30, True), fill=MUTED)
+    draw.text((92, 86), "BytePulse｜海外AI笔记", font=font(32, True), fill=MUTED)
     draw.text((92, H - 108), page, font=font(26), fill=MUTED)
-    draw.text((W - 292, H - 108), "评论「工具」", font=font(30, True), fill=RED)
+    draw.text((W - 318, H - 112), "评论「工具」", font=font(34, True), fill=RED)
 
 
 def draw_quote_mark(draw: ImageDraw.ImageDraw) -> None:
@@ -55,7 +56,18 @@ def draw_quote_mark(draw: ImageDraw.ImageDraw) -> None:
 
 
 def draw_highlight(draw: ImageDraw.ImageDraw, x: int, y: int, width: int) -> None:
-    draw.rectangle((x, y, x + width, y + 20), fill=YELLOW)
+    draw.rectangle((x, y, x + width, y + 24), fill=YELLOW)
+
+
+def draw_heavy(
+    draw: ImageDraw.ImageDraw,
+    xy: tuple[int, int],
+    text: str,
+    fnt: ImageFont.FreeTypeFont,
+    fill: str = INK,
+    stroke: int = 1,
+) -> None:
+    draw.text(xy, text, font=fnt, fill=fill, stroke_width=stroke, stroke_fill=fill)
 
 
 def draw_multiline(
@@ -97,14 +109,14 @@ def make_card_1_v2() -> Image.Image:
     draw = ImageDraw.Draw(im)
     draw_brand(draw, "01 / 05")
     draw_quote_mark(draw)
-    x, y = 150, 640
-    big = font(94, True)
+    x, y = 125, 610
+    big = font(112, True)
     for line in ["我把 42 分钟", "英文 AI 视频", "整理成中文笔记"]:
-        draw.text((x, y), line, font=big, fill=INK)
+        draw_heavy(draw, (x, y), line, big, stroke=2)
         if "AI" in line:
-            draw_highlight(draw, x + 380, y + 104, 280)
-        y += 148
-    draw.text((150, 1165), "OpenAI Stargate 数据中心讲了什么？", font=font(42, True), fill=MUTED)
+            draw_highlight(draw, x + 455, y + 124, 320)
+        y += 166
+    draw.text((130, 1168), "OpenAI Stargate 数据中心讲了什么？", font=font(46, True), fill=MUTED)
     return im
 
 
@@ -139,13 +151,13 @@ def make_card_2_v2() -> Image.Image:
     draw = ImageDraw.Draw(im)
     draw_brand(draw, "02 / 05")
     draw_quote_mark(draw)
-    draw.text((150, 455), "一句话总结", font=font(62, True), fill=INK)
-    draw_highlight(draw, 150, 544, 340)
-    big = font(72, True)
+    draw_heavy(draw, (130, 455), "一句话总结", font(74, True), stroke=1)
+    draw_highlight(draw, 130, 558, 390)
+    big = font(96, True)
     y = 710
-    for line in ["Stargate 不是", "普通 AI 新闻", "而是一场", "物理基建竞赛"]:
-        draw.text((150, y), line, font=big, fill=INK)
-        y += 112
+    for line in ["Stargate不是", "普通AI新闻", "而是一场", "物理基建竞赛"]:
+        draw_heavy(draw, (130, y), line, big, stroke=2)
+        y += 132
     return im
 
 
@@ -171,14 +183,14 @@ def make_card_3_v2() -> Image.Image:
     im = Image.new("RGB", (W, H), BG)
     draw = ImageDraw.Draw(im)
     draw_brand(draw, "03 / 05")
-    draw.text((150, 355), "是否值得看？", font=font(70, True), fill=INK)
-    draw.text((150, 535), "4 / 5", font=font(150, True), fill=INK)
-    draw_highlight(draw, 155, 695, 340)
-    body = font(58, True)
-    y = 900
-    for line in ["值得。它讲清了", "AI 背后的真实成本：", "算力、电力、冷却、", "土地和供应链。"]:
-        draw.text((150, y), line, font=body, fill=INK)
-        y += 92
+    draw_heavy(draw, (130, 340), "是否值得看？", font(84, True), stroke=1)
+    draw_heavy(draw, (130, 525), "4 / 5", font(178, True), stroke=2)
+    draw_highlight(draw, 135, 718, 390)
+    body = font(70, True)
+    y = 920
+    for line in ["值得。它讲清了", "AI背后的真实成本：", "算力、电力、冷却", "土地和供应链"]:
+        draw_heavy(draw, (130, y), line, body, stroke=1)
+        y += 104
     return im
 
 
@@ -207,9 +219,9 @@ def make_card_4_v2() -> Image.Image:
     im = Image.new("RGB", (W, H), BG)
     draw = ImageDraw.Draw(im)
     draw_brand(draw, "04 / 05")
-    draw.text((150, 250), "我整理出的", font=font(62, True), fill=INK)
-    draw.text((150, 340), "4 个核心观点", font=font(86, True), fill=INK)
-    draw_highlight(draw, 485, 450, 500)
+    draw_heavy(draw, (130, 245), "我整理出的", font(74, True), stroke=1)
+    draw_heavy(draw, (130, 345), "4 个核心观点", font(100, True), stroke=2)
+    draw_highlight(draw, 492, 474, 520)
     items = [
         "软件瓶颈变成物理瓶颈",
         "AI 数据中心开始逐电而居",
@@ -218,9 +230,9 @@ def make_card_4_v2() -> Image.Image:
     ]
     y = 650
     for idx, item in enumerate(items, 1):
-        draw.text((150, y), f"{idx}.", font=font(62, True), fill=RED)
-        y = draw_multiline(draw, item, (240, y - 6), font(58, True), max_width=790, line_gap=18)
-        y += 58
+        draw_heavy(draw, (130, y), f"{idx}.", font(70, True), fill=RED, stroke=1)
+        y = draw_multiline(draw, item, (230, y - 4), font(64, True), max_width=850, line_gap=16)
+        y += 54
     return im
 
 
@@ -247,33 +259,29 @@ def make_card_5_v2() -> Image.Image:
     im = Image.new("RGB", (W, H), BG)
     draw = ImageDraw.Draw(im)
     draw_brand(draw, "05 / 05")
-    draw.text((150, 330), "你发 YouTube 链接", font=font(66, True), fill=INK)
-    draw.text((150, 430), "我整理成中文笔记", font=font(80, True), fill=INK)
-    draw_highlight(draw, 150, 530, 610)
+    draw_heavy(draw, (130, 315), "你发YouTube链接", font(76, True), stroke=1)
+    draw_heavy(draw, (130, 430), "我整理成中文笔记", font(94, True), stroke=2)
+    draw_highlight(draw, 130, 552, 700)
     items = ["是否值得看", "核心观点", "详细笔记", "术语解释", "行动清单", "Markdown 文件"]
-    y = 705
+    y = 715
     for index, item in enumerate(items):
-        col = 150 if index % 2 == 0 else 620
-        row_y = y + (index // 2) * 115
-        draw.ellipse((col, row_y + 20, col + 22, row_y + 42), fill=RED)
-        draw.text((col + 48, row_y), item, font=font(44, True), fill=INK)
-    draw.rounded_rectangle((150, 1200, 660, 1318), radius=12, fill=RED)
-    draw.text((205, 1230), "评论「工具」", font=font(52, True), fill="white")
+        col = 130 if index % 2 == 0 else 630
+        row_y = y + (index // 2) * 128
+        draw.ellipse((col, row_y + 24, col + 26, row_y + 50), fill=RED)
+        draw_heavy(draw, (col + 54, row_y), item, font(50, True), stroke=1)
+    draw.rounded_rectangle((130, 1220, 685, 1345), radius=12, fill=RED)
+    draw_heavy(draw, (190, 1250), "评论「工具」", font(60, True), fill="white", stroke=1)
     return im
 
 
 def main() -> None:
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    cards = [make_card_1(), make_card_2(), make_card_3(), make_card_4(), make_card_5()]
-    for index, image in enumerate(cards, 1):
-        image.save(OUT_DIR / f"post_001_card_{index}.png", quality=95)
-        print(f"saved: {OUT_DIR / f'post_001_card_{index}.png'}")
-
-    OUT_DIR_V2.mkdir(parents=True, exist_ok=True)
-    cards_v2 = [make_card_1_v2(), make_card_2_v2(), make_card_3_v2(), make_card_4_v2(), make_card_5_v2()]
-    for index, image in enumerate(cards_v2, 1):
-        image.save(OUT_DIR_V2 / f"post_001_card_{index}.png", quality=95)
-        print(f"saved: {OUT_DIR_V2 / f'post_001_card_{index}.png'}")
+    output_dirs = [OUT_DIR, OUT_DIR_V2, OUT_DIR_READY]
+    cards = [make_card_1_v2(), make_card_2_v2(), make_card_3_v2(), make_card_4_v2(), make_card_5_v2()]
+    for output_dir in output_dirs:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        for index, image in enumerate(cards, 1):
+            image.save(output_dir / f"post_001_card_{index}.png", quality=95)
+            print(f"saved: {output_dir / f'post_001_card_{index}.png'}")
 
 
 if __name__ == "__main__":
