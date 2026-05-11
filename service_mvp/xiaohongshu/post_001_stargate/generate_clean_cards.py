@@ -6,6 +6,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 OUT_DIR = Path(__file__).resolve().parent / "clean_cards"
+OUT_DIR_V2 = Path(__file__).resolve().parent / "clean_cards_v2"
 W, H = 1242, 1660
 BG = "#fbfaf5"
 INK = "#3f3d3b"
@@ -44,9 +45,9 @@ def wrap_text(draw: ImageDraw.ImageDraw, text: str, fnt: ImageFont.FreeTypeFont,
 
 
 def draw_brand(draw: ImageDraw.ImageDraw, page: str) -> None:
-    draw.text((92, 86), "BytePulse｜海外AI笔记", font=font(34, True), fill=INK)
-    draw.text((92, H - 118), page, font=font(28), fill=MUTED)
-    draw.text((W - 318, H - 118), "评论「工具」", font=font(28, True), fill=RED)
+    draw.text((92, 86), "BytePulse｜海外AI笔记", font=font(30, True), fill=MUTED)
+    draw.text((92, H - 108), page, font=font(26), fill=MUTED)
+    draw.text((W - 292, H - 108), "评论「工具」", font=font(30, True), fill=RED)
 
 
 def draw_quote_mark(draw: ImageDraw.ImageDraw) -> None:
@@ -91,6 +92,22 @@ def make_card_1() -> Image.Image:
     return im
 
 
+def make_card_1_v2() -> Image.Image:
+    im = Image.new("RGB", (W, H), BG)
+    draw = ImageDraw.Draw(im)
+    draw_brand(draw, "01 / 05")
+    draw_quote_mark(draw)
+    x, y = 150, 640
+    big = font(94, True)
+    for line in ["我把 42 分钟", "英文 AI 视频", "整理成中文笔记"]:
+        draw.text((x, y), line, font=big, fill=INK)
+        if "AI" in line:
+            draw_highlight(draw, x + 380, y + 104, 280)
+        y += 148
+    draw.text((150, 1165), "OpenAI Stargate 数据中心讲了什么？", font=font(42, True), fill=MUTED)
+    return im
+
+
 def make_card_2() -> Image.Image:
     im = Image.new("RGB", (W, H), BG)
     draw = ImageDraw.Draw(im)
@@ -117,6 +134,21 @@ def make_card_2() -> Image.Image:
     return im
 
 
+def make_card_2_v2() -> Image.Image:
+    im = Image.new("RGB", (W, H), BG)
+    draw = ImageDraw.Draw(im)
+    draw_brand(draw, "02 / 05")
+    draw_quote_mark(draw)
+    draw.text((150, 455), "一句话总结", font=font(62, True), fill=INK)
+    draw_highlight(draw, 150, 544, 340)
+    big = font(72, True)
+    y = 710
+    for line in ["Stargate 不是", "普通 AI 新闻", "而是一场", "物理基建竞赛"]:
+        draw.text((150, y), line, font=big, fill=INK)
+        y += 112
+    return im
+
+
 def make_card_3() -> Image.Image:
     im = Image.new("RGB", (W, H), BG)
     draw = ImageDraw.Draw(im)
@@ -132,6 +164,21 @@ def make_card_3() -> Image.Image:
         max_width=930,
         line_gap=28,
     )
+    return im
+
+
+def make_card_3_v2() -> Image.Image:
+    im = Image.new("RGB", (W, H), BG)
+    draw = ImageDraw.Draw(im)
+    draw_brand(draw, "03 / 05")
+    draw.text((150, 355), "是否值得看？", font=font(70, True), fill=INK)
+    draw.text((150, 535), "4 / 5", font=font(150, True), fill=INK)
+    draw_highlight(draw, 155, 695, 340)
+    body = font(58, True)
+    y = 900
+    for line in ["值得。它讲清了", "AI 背后的真实成本：", "算力、电力、冷却、", "土地和供应链。"]:
+        draw.text((150, y), line, font=body, fill=INK)
+        y += 92
     return im
 
 
@@ -156,6 +203,27 @@ def make_card_4() -> Image.Image:
     return im
 
 
+def make_card_4_v2() -> Image.Image:
+    im = Image.new("RGB", (W, H), BG)
+    draw = ImageDraw.Draw(im)
+    draw_brand(draw, "04 / 05")
+    draw.text((150, 250), "我整理出的", font=font(62, True), fill=INK)
+    draw.text((150, 340), "4 个核心观点", font=font(86, True), fill=INK)
+    draw_highlight(draw, 485, 450, 500)
+    items = [
+        "软件瓶颈变成物理瓶颈",
+        "AI 数据中心开始逐电而居",
+        "AI 基建像下一代超级公路",
+        "碳中和承诺被算力需求冲击",
+    ]
+    y = 650
+    for idx, item in enumerate(items, 1):
+        draw.text((150, y), f"{idx}.", font=font(62, True), fill=RED)
+        y = draw_multiline(draw, item, (240, y - 6), font(58, True), max_width=790, line_gap=18)
+        y += 58
+    return im
+
+
 def make_card_5() -> Image.Image:
     im = Image.new("RGB", (W, H), BG)
     draw = ImageDraw.Draw(im)
@@ -175,12 +243,37 @@ def make_card_5() -> Image.Image:
     return im
 
 
+def make_card_5_v2() -> Image.Image:
+    im = Image.new("RGB", (W, H), BG)
+    draw = ImageDraw.Draw(im)
+    draw_brand(draw, "05 / 05")
+    draw.text((150, 330), "你发 YouTube 链接", font=font(66, True), fill=INK)
+    draw.text((150, 430), "我整理成中文笔记", font=font(80, True), fill=INK)
+    draw_highlight(draw, 150, 530, 610)
+    items = ["是否值得看", "核心观点", "详细笔记", "术语解释", "行动清单", "Markdown 文件"]
+    y = 705
+    for index, item in enumerate(items):
+        col = 150 if index % 2 == 0 else 620
+        row_y = y + (index // 2) * 115
+        draw.ellipse((col, row_y + 20, col + 22, row_y + 42), fill=RED)
+        draw.text((col + 48, row_y), item, font=font(44, True), fill=INK)
+    draw.rounded_rectangle((150, 1200, 660, 1318), radius=12, fill=RED)
+    draw.text((205, 1230), "评论「工具」", font=font(52, True), fill="white")
+    return im
+
+
 def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     cards = [make_card_1(), make_card_2(), make_card_3(), make_card_4(), make_card_5()]
     for index, image in enumerate(cards, 1):
         image.save(OUT_DIR / f"post_001_card_{index}.png", quality=95)
         print(f"saved: {OUT_DIR / f'post_001_card_{index}.png'}")
+
+    OUT_DIR_V2.mkdir(parents=True, exist_ok=True)
+    cards_v2 = [make_card_1_v2(), make_card_2_v2(), make_card_3_v2(), make_card_4_v2(), make_card_5_v2()]
+    for index, image in enumerate(cards_v2, 1):
+        image.save(OUT_DIR_V2 / f"post_001_card_{index}.png", quality=95)
+        print(f"saved: {OUT_DIR_V2 / f'post_001_card_{index}.png'}")
 
 
 if __name__ == "__main__":
