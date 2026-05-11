@@ -19,6 +19,36 @@
 
 优先使用已有 `.vtt` 字幕文件。
 
+### 方式 A：本地操作台
+
+第一次使用先安装依赖：
+
+```powershell
+pip install -r .\service_mvp\requirements.txt
+```
+
+启动操作台：
+
+```powershell
+streamlit run .\service_mvp\app.py
+```
+
+浏览器会打开本地页面，通常是：
+
+```text
+http://localhost:8501
+```
+
+在操作台里输入：
+
+- YouTube 链接
+- 案例编号，例如 `case_003`
+- 案例标题
+
+然后按页面顺序完成：创建案例目录、下载字幕、清洗字幕、复制 Prompt。
+
+### 方式 B：命令行
+
 如果需要从 YouTube 下载字幕，cookie 路径由项目根目录的 `.env` 管理：
 
 ```text

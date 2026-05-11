@@ -1,0 +1,52 @@
+{
+  "market_metrics.csv": {
+    "日期": "date",
+    "平台": "platform",
+    "标题": "post_title",
+    "链接": "url",
+    "浏览": "views",
+    "点赞": "likes",
+    "收藏": "saves",
+    "评论": "comments",
+    "私信": "dms",
+    "加微信": "wechat_added",
+    "付款订单": "paid_orders",
+    "收入": "revenue_cny",
+    "备注": "notes"
+  },
+  "leads.csv": {
+    "日期": "date",
+    "昵称": "name_or_handle",
+    "来源": "source",
+    "需求": "need",
+    "视频链接": "youtube_url",
+    "状态": "status",
+    "下一步动作": "next_action",
+    "备注": "notes"
+  },
+  "orders.csv": {
+    "日期": "date",
+    "客户": "customer",
+    "套餐": "package",
+    "金额": "price_cny",
+    "视频链接": "youtube_url",
+    "视频时长": "duration_min",
+    "状态": "status",
+    "交付文件": "delivery_file",
+    "追问日期": "follow_up_date",
+    "是否复购": "repurchase"
+  },
+  "quality_checklist.csv": {
+    "案例编号": "case_id",
+    "标题": "title",
+    "一句话总结": "summary_score",
+    "核心观点": "core_points_score",
+    "技术步骤": "technical_steps_score",
+    "术语解释": "terms_score",
+    "Markdown": "markdown_score",
+    "行动清单": "action_list_score",
+    "总分": "total_score",
+    "是否可发布": "publish_ready",
+    "备注": "notes"
+  }
+}

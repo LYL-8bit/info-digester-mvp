@@ -1,0 +1,197 @@
+from __future__ import annotations
+
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+import streamlit as st
+
+
+SERVICE_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = SERVICE_ROOT.parent
+SCRIPTS_DIR = SERVICE_ROOT / "scripts"
+CASES_DIR = SERVICE_ROOT / "cases"
+PROMPT_FILE = SERVICE_ROOT / "02_固定Prompt.md"
+
+sys.path.insert(0, str(SCRIPTS_DIR))
+
+from clean_vtt import clean_vtt_text  # noqa: E402
+from env_config import cookie_status  # noqa: E402
+
+
+def sanitize_case_id(raw_case_id: str) -> str:
+    value = raw_case_id.strip()
+    value = re.sub(r"[^A-Za-z0-9_-]+", "_", value)
+    if not value:
+        value = "case_001"
+    if not value.startswith("case_"):
+        value = f"case_{value}"
+    return value
+
+
+def run_command(command: list[str]) -> tuple[bool, str]:
+    try:
+        result = subprocess.run(
+            command,
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        return False, str(exc)
+
+    output = "\n".join(part for part in [result.stdout, result.stderr] if part)
+    return result.returncode == 0, output.strip()
+
+
+def build_download_command(
+    youtube_url: str,
+    case_dir: Path,
+    use_cookies: bool,
+    use_auto_subs: bool,
+    lang: str,
+) -> list[str]:
+    command = [
+        "yt-dlp",
+        "--skip-download",
+        "--sub-lang",
+        lang,
+        "--sub-format",
+        "vtt",
+        "-o",
+        str(case_dir / "%(title)s [%(id)s].%(ext)s"),
+    ]
+
+    command.append("--write-auto-subs" if use_auto_subs else "--write-subs")
+
+    cookie_file, has_cookie = cookie_status()
+    if use_cookies and has_cookie and cookie_file:
+        command.extend(["--cookies", str(cookie_file)])
+
+    command.append(youtube_url)
+    return command
+
+
+def latest_vtt(case_dir: Path) -> Path | None:
+    vtt_files = sorted(case_dir.glob("*.vtt"), key=lambda path: path.stat().st_mtime, reverse=True)
+    return vtt_files[0] if vtt_files else None
+
+
+def clean_subtitle(vtt_file: Path, output_file: Path, dedupe: str) -> str:
+    text = vtt_file.read_text(encoding="utf-8", errors="ignore")
+    cleaned = clean_vtt_text(text, dedupe=dedupe)
+    output_file.write_text(cleaned, encoding="utf-8")
+    return cleaned
+
+
+def build_prompt(transcript_text: str) -> str:
+    template = PROMPT_FILE.read_text(encoding="utf-8")
+    placeholder = "在这里粘贴 transcript.txt"
+    if placeholder in template:
+        return template.replace(placeholder, transcript_text)
+    return f"{template.rstrip()}\n\n```text\n{transcript_text}\n```"
+
+
+st.set_page_config(page_title="信息消化器接单操作台", page_icon="BP", layout="wide")
+
+st.title("信息消化器接单操作台")
+st.caption("本地使用：下载英文字幕、清洗 transcript、生成可复制 Prompt。")
+
+cookie_file, has_cookie = cookie_status()
+cookie_label = "已找到" if has_cookie else "未找到"
+st.info(f"Cookie 状态：{cookie_label}")
+
+with st.sidebar:
+    st.header("订单信息")
+    youtube_url = st.text_input("YouTube 链接")
+    case_id = sanitize_case_id(st.text_input("案例编号", value="case_003"))
+    case_title = st.text_input("案例标题", value="")
+    lang = st.text_input("字幕语言", value="en")
+    use_cookies = st.checkbox("使用 .env 中的 cookie", value=True)
+    use_auto_subs = st.checkbox("下载自动字幕", value=True)
+    dedupe = st.selectbox("清洗去重方式", ["adjacent", "global", "none"], index=0)
+
+case_dir = CASES_DIR / case_id
+transcript_file = case_dir / "transcript.txt"
+note_file = case_dir / "note.md"
+
+st.subheader("1. 创建案例目录")
+st.code(str(case_dir), language="text")
+if st.button("创建/确认案例目录"):
+    case_dir.mkdir(parents=True, exist_ok=True)
+    if case_title and not note_file.exists():
+        note_file.write_text(f"# {case_title}\n\n", encoding="utf-8")
+    st.success("案例目录已就绪。")
+
+st.subheader("2. 下载英文字幕")
+if not shutil.which("yt-dlp"):
+    st.warning("未在 PATH 中找到 yt-dlp。请先确认 yt-dlp 已安装。")
+
+if use_cookies and not has_cookie:
+    st.warning("已选择使用 cookie，但 .env 中的 cookie 文件未找到。下载时将不使用 cookie。")
+
+if st.button("下载字幕"):
+    if not youtube_url.strip():
+        st.error("请先输入 YouTube 链接。")
+    else:
+        case_dir.mkdir(parents=True, exist_ok=True)
+        command = build_download_command(
+            youtube_url=youtube_url.strip(),
+            case_dir=case_dir,
+            use_cookies=use_cookies,
+            use_auto_subs=use_auto_subs,
+            lang=lang.strip() or "en",
+        )
+        ok, output = run_command(command)
+        st.code(output or "yt-dlp finished.", language="text")
+        if ok:
+            st.success("字幕下载命令已完成。")
+        else:
+            st.error("字幕下载失败，请查看输出。")
+
+st.subheader("3. 清洗字幕")
+vtt_file = latest_vtt(case_dir) if case_dir.exists() else None
+if vtt_file:
+    st.write(f"检测到字幕文件：`{vtt_file.name}`")
+else:
+    st.write("尚未检测到 `.vtt` 字幕文件。")
+
+if st.button("清洗为 transcript.txt"):
+    if not vtt_file:
+        st.error("没有找到 `.vtt` 字幕文件。")
+    else:
+        transcript_text = clean_subtitle(vtt_file, transcript_file, dedupe=dedupe)
+        line_count = len([line for line in transcript_text.splitlines() if line.strip()])
+        st.success(f"已生成 transcript.txt，共 {line_count} 行。")
+
+st.subheader("4. 复制 Prompt 到 ChatGPT / Claude")
+if transcript_file.exists():
+    transcript_text = transcript_file.read_text(encoding="utf-8", errors="ignore")
+    complete_prompt = build_prompt(transcript_text)
+    st.text_area("完整 Prompt", complete_prompt, height=360)
+else:
+    st.write("生成 `transcript.txt` 后，这里会出现完整 Prompt。")
+
+st.subheader("5. 交付检查")
+st.checkbox("一句话总结不超过 60 字")
+st.checkbox("是否值得看有明确判断")
+st.checkbox("没有编造时间戳")
+st.checkbox("没有编造命令")
+st.checkbox("Markdown 表格正常")
+st.checkbox("可以直接复制到 Obsidian / Notion / 微信")
+
+st.subheader("6. 小红书发布提醒")
+st.markdown(
+    """
+- 第一张图：封面标题。
+- 第二张图：原视频截图。
+- 第三张图：一句话总结 + 是否值得看。
+- 第四张图：核心观点。
+- 第五张图：技术步骤 / 行动清单。
+"""
+)

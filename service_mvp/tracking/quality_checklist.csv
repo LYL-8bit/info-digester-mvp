@@ -1,3 +1,2 @@
-case_id,title,summary_score,core_points_score,technical_steps_score,terms_score,markdown_score,action_list_score,total_score,publish_ready,notes
+﻿案例编号,标题,一句话总结,核心观点,技术步骤,术语解释,Markdown,行动清单,总分,是否可发布,备注
 case_001,示例案例,2,2,2,1,2,1,10,yes,
-
