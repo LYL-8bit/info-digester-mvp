@@ -49,6 +49,20 @@ def run_command(command: list[str]) -> tuple[bool, str]:
     return result.returncode == 0, output.strip()
 
 
+def add_cookie_args(command: list[str], use_cookies: bool) -> list[str]:
+    cookie_file, has_cookie = cookie_status()
+    if use_cookies and has_cookie and cookie_file:
+        command.extend(["--cookies", str(cookie_file)])
+    return command
+
+
+def build_list_subs_command(youtube_url: str, use_cookies: bool) -> list[str]:
+    command = ["yt-dlp", "--skip-download", "--list-subs"]
+    add_cookie_args(command, use_cookies)
+    command.append(youtube_url)
+    return command
+
+
 def build_download_command(
     youtube_url: str,
     case_dir: Path,
@@ -63,18 +77,37 @@ def build_download_command(
         lang,
         "--sub-format",
         "vtt",
+        "--ignore-no-formats-error",
         "-o",
         str(case_dir / "%(title)s [%(id)s].%(ext)s"),
     ]
 
     command.append("--write-auto-subs" if use_auto_subs else "--write-subs")
 
-    cookie_file, has_cookie = cookie_status()
-    if use_cookies and has_cookie and cookie_file:
-        command.extend(["--cookies", str(cookie_file)])
+    add_cookie_args(command, use_cookies)
 
     command.append(youtube_url)
     return command
+
+
+def diagnose_yt_dlp_output(output: str) -> list[str]:
+    hints: list[str] = []
+    lower_output = output.lower()
+
+    if "only images are available" in lower_output or "requested format is not available" in lower_output:
+        hints.append(
+            "这个链接当前没有可用的视频/字幕格式，常见于直播未结束、回放未处理完成、会员/年龄/地区限制，或 YouTube 暂时只暴露缩略图。"
+        )
+    if "n challenge solving failed" in lower_output:
+        hints.append(
+            "YouTube 的 n challenge 解析失败。通常不影响字幕优先尝试，但如果一直失败，可以更新 yt-dlp，或安装 Node.js 后再试。"
+        )
+    if "there are no subtitles" in lower_output or "no subtitles" in lower_output:
+        hints.append("这个视频没有检测到目标语言字幕。可以切换字幕语言，或等直播回放处理完成后再试。")
+    if "sign in" in lower_output or "cookies" in lower_output:
+        hints.append("这个视频可能需要登录态。请确认 .env 中的 cookie 文件是最新导出的。")
+
+    return hints
 
 
 def latest_vtt(case_dir: Path) -> Path | None:
@@ -135,6 +168,19 @@ if not shutil.which("yt-dlp"):
 if use_cookies and not has_cookie:
     st.warning("已选择使用 cookie，但 .env 中的 cookie 文件未找到。下载时将不使用 cookie。")
 
+if st.button("检查可用字幕"):
+    if not youtube_url.strip():
+        st.error("请先输入 YouTube 链接。")
+    else:
+        command = build_list_subs_command(youtube_url.strip(), use_cookies=use_cookies)
+        ok, output = run_command(command)
+        st.code(output or "yt-dlp finished.", language="text")
+        hints = diagnose_yt_dlp_output(output)
+        for hint in hints:
+            st.warning(hint)
+        if ok and not hints:
+            st.success("字幕列表检查完成。")
+
 if st.button("下载字幕"):
     if not youtube_url.strip():
         st.error("请先输入 YouTube 链接。")
@@ -149,6 +195,9 @@ if st.button("下载字幕"):
         )
         ok, output = run_command(command)
         st.code(output or "yt-dlp finished.", language="text")
+        hints = diagnose_yt_dlp_output(output)
+        for hint in hints:
+            st.warning(hint)
         if ok:
             st.success("字幕下载命令已完成。")
         else:
