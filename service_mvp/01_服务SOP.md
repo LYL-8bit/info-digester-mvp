@@ -29,8 +29,22 @@ pip install -r .\service_mvp\requirements.txt
 
 启动操作台：
 
+如果你已经在 `D:\MVP\service_mvp` 目录里：
+
+```powershell
+streamlit run .\app.py
+```
+
+如果你在 `D:\MVP` 目录里：
+
 ```powershell
 streamlit run .\service_mvp\app.py
+```
+
+也可以直接双击：
+
+```text
+D:\MVP\service_mvp\run_console.bat
 ```
 
 浏览器会打开本地页面，通常是：
