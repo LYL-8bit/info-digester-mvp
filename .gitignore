@@ -1,0 +1,26 @@
+# Local secrets and auth files
+.env
+.env.*
+!.env.example
+cookies.txt
+service_mvp/cookies/
+
+# Customer / operations data
+service_mvp/tracking/leads.csv
+service_mvp/tracking/orders.csv
+service_mvp/tracking/market_metrics.csv
+
+# Account screenshots and private brand assets
+小红书账号_BytePulse字节脉搏/
+
+# Python / local runtime noise
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
