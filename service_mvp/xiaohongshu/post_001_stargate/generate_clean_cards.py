@@ -56,7 +56,7 @@ def draw_quote_mark(draw: ImageDraw.ImageDraw) -> None:
 
 
 def draw_highlight(draw: ImageDraw.ImageDraw, x: int, y: int, width: int) -> None:
-    draw.rectangle((x, y, x + width, y + 24), fill=YELLOW)
+    draw.rectangle((x, y, x + width, y + 20), fill=YELLOW)
 
 
 def draw_heavy(
@@ -68,6 +68,25 @@ def draw_heavy(
     stroke: int = 1,
 ) -> None:
     draw.text(xy, text, font=fnt, fill=fill, stroke_width=stroke, stroke_fill=fill)
+
+
+def underline_segment(
+    draw: ImageDraw.ImageDraw,
+    xy: tuple[int, int],
+    prefix: str,
+    segment: str,
+    fnt: ImageFont.FreeTypeFont,
+    stroke: int = 1,
+    pad_x: int = 16,
+    gap: int = 14,
+    height: int = 18,
+) -> None:
+    x, y = xy
+    start_x = x + text_width(draw, prefix, fnt)
+    width = text_width(draw, segment, fnt)
+    bbox = draw.textbbox((start_x, y), segment, font=fnt, stroke_width=stroke)
+    line_y = bbox[3] + gap
+    draw_highlight(draw, start_x - pad_x, line_y, width + pad_x * 2)
 
 
 def draw_multiline(
@@ -109,14 +128,17 @@ def make_card_1_v2() -> Image.Image:
     draw = ImageDraw.Draw(im)
     draw_brand(draw, "01 / 05")
     draw_quote_mark(draw)
-    x, y = 125, 610
-    big = font(112, True)
-    for line in ["我把 42 分钟", "英文 AI 视频", "整理成中文笔记"]:
-        draw_heavy(draw, (x, y), line, big, stroke=2)
-        if "AI" in line:
-            draw_highlight(draw, x + 455, y + 124, 320)
-        y += 166
-    draw.text((130, 1168), "OpenAI Stargate 数据中心讲了什么？", font=font(46, True), fill=MUTED)
+    x = 130
+    big = font(106, True)
+    lines = [
+        ("我把 42 分钟", 610),
+        ("英文 AI 视频", 780),
+        ("整理成中文笔记", 970),
+    ]
+    for line, y in lines:
+        draw_heavy(draw, (x, y), line, big, stroke=1)
+    underline_segment(draw, (x, 780), "英文 AI ", "视频", big, stroke=1, gap=18)
+    draw.text((130, 1228), "OpenAI Stargate 数据中心讲了什么？", font=font(44, True), fill=MUTED)
     return im
 
 
@@ -151,12 +173,13 @@ def make_card_2_v2() -> Image.Image:
     draw = ImageDraw.Draw(im)
     draw_brand(draw, "02 / 05")
     draw_quote_mark(draw)
-    draw_heavy(draw, (130, 455), "一句话总结", font(74, True), stroke=1)
-    draw_highlight(draw, 130, 558, 390)
-    big = font(96, True)
-    y = 710
-    for line in ["Stargate不是", "普通AI新闻", "而是一场", "物理基建竞赛"]:
-        draw_heavy(draw, (130, y), line, big, stroke=2)
+    title = font(72, True)
+    draw_heavy(draw, (130, 455), "一句话总结", title, stroke=1)
+    underline_segment(draw, (130, 455), "", "一句话总结", title, stroke=1, gap=16, height=18)
+    big = font(92, True)
+    y = 705
+    for line in ["Stargate不是", "一条AI新闻", "而是一场", "物理基建竞赛"]:
+        draw_heavy(draw, (130, y), line, big, stroke=1)
         y += 132
     return im
 
@@ -183,14 +206,15 @@ def make_card_3_v2() -> Image.Image:
     im = Image.new("RGB", (W, H), BG)
     draw = ImageDraw.Draw(im)
     draw_brand(draw, "03 / 05")
-    draw_heavy(draw, (130, 340), "是否值得看？", font(84, True), stroke=1)
-    draw_heavy(draw, (130, 525), "4 / 5", font(178, True), stroke=2)
-    draw_highlight(draw, 135, 718, 390)
-    body = font(70, True)
-    y = 920
+    draw_heavy(draw, (130, 335), "是否值得看？", font(82, True), stroke=1)
+    score = font(172, True)
+    draw_heavy(draw, (130, 520), "4 / 5", score, stroke=1)
+    underline_segment(draw, (130, 520), "", "4 / 5", score, stroke=1, gap=12, height=18)
+    body = font(66, True)
+    y = 910
     for line in ["值得。它讲清了", "AI背后的真实成本：", "算力、电力、冷却", "土地和供应链"]:
         draw_heavy(draw, (130, y), line, body, stroke=1)
-        y += 104
+        y += 100
     return im
 
 
@@ -220,19 +244,20 @@ def make_card_4_v2() -> Image.Image:
     draw = ImageDraw.Draw(im)
     draw_brand(draw, "04 / 05")
     draw_heavy(draw, (130, 245), "我整理出的", font(74, True), stroke=1)
-    draw_heavy(draw, (130, 345), "4 个核心观点", font(100, True), stroke=2)
-    draw_highlight(draw, 492, 474, 520)
+    headline = font(98, True)
+    draw_heavy(draw, (130, 345), "4 个核心观点", headline, stroke=1)
+    underline_segment(draw, (130, 345), "4 个", "核心观点", headline, stroke=1, gap=16, height=18)
     items = [
         "软件瓶颈变成物理瓶颈",
         "AI 数据中心开始逐电而居",
         "AI 基建像下一代超级公路",
         "碳中和承诺被算力需求冲击",
     ]
-    y = 650
+    y = 660
     for idx, item in enumerate(items, 1):
-        draw_heavy(draw, (130, y), f"{idx}.", font(70, True), fill=RED, stroke=1)
-        y = draw_multiline(draw, item, (230, y - 4), font(64, True), max_width=850, line_gap=16)
-        y += 54
+        draw_heavy(draw, (130, y), f"{idx}.", font(66, True), fill=RED, stroke=1)
+        y = draw_multiline(draw, item, (230, y - 2), font(60, True), max_width=860, line_gap=16)
+        y += 58
     return im
 
 
@@ -259,16 +284,17 @@ def make_card_5_v2() -> Image.Image:
     im = Image.new("RGB", (W, H), BG)
     draw = ImageDraw.Draw(im)
     draw_brand(draw, "05 / 05")
-    draw_heavy(draw, (130, 315), "你发YouTube链接", font(76, True), stroke=1)
-    draw_heavy(draw, (130, 430), "我整理成中文笔记", font(94, True), stroke=2)
-    draw_highlight(draw, 130, 552, 700)
+    draw_heavy(draw, (130, 315), "你发YouTube链接", font(74, True), stroke=1)
+    headline = font(90, True)
+    draw_heavy(draw, (130, 430), "我整理成中文笔记", headline, stroke=1)
+    underline_segment(draw, (130, 430), "", "我整理成中文笔记", headline, stroke=1, gap=16, height=18)
     items = ["是否值得看", "核心观点", "详细笔记", "术语解释", "行动清单", "Markdown 文件"]
     y = 715
     for index, item in enumerate(items):
         col = 130 if index % 2 == 0 else 630
         row_y = y + (index // 2) * 128
         draw.ellipse((col, row_y + 24, col + 26, row_y + 50), fill=RED)
-        draw_heavy(draw, (col + 54, row_y), item, font(50, True), stroke=1)
+        draw_heavy(draw, (col + 54, row_y), item, font(48, True), stroke=1)
     draw.rounded_rectangle((130, 1220, 685, 1345), radius=12, fill=RED)
     draw_heavy(draw, (190, 1250), "评论「工具」", font(60, True), fill="white", stroke=1)
     return im
