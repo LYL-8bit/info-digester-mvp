@@ -150,3 +150,38 @@ def update_order_status(orders_file: Path, order_id: str, status: str) -> dict[s
         raise ValueError(f"Order not found: {order_id}")
     write_orders(orders_file, rows)
     return updated
+
+
+def _to_float(value: str) -> float:
+    try:
+        return float(value or 0)
+    except ValueError:
+        return 0.0
+
+
+def summarize_orders(
+    orders_file: Path,
+    *,
+    monthly_token_budget_usd: float = 40,
+    usd_to_cny: float = 7.2,
+) -> dict[str, int | str]:
+    rows = read_orders(orders_file)
+    revenue_statuses = {"paid", "processing", "delivered"}
+    revenue_rows = [row for row in rows if row.get("status") in revenue_statuses]
+    revenue_cny = sum(_to_float(row.get("price_cny", "0")) for row in revenue_rows)
+    estimated_profit_cny = sum(_to_float(row.get("estimated_profit_cny", "0")) for row in revenue_rows)
+    token_budget_cny = monthly_token_budget_usd * usd_to_cny
+    token_budget_gap_cny = max(0.0, token_budget_cny - estimated_profit_cny)
+    progress_pct = 0.0 if token_budget_cny <= 0 else min(100.0, estimated_profit_cny / token_budget_cny * 100)
+
+    return {
+        "total_orders": len(rows),
+        "paid_orders": sum(1 for row in rows if row.get("status") in {"paid", "processing", "delivered"}),
+        "delivered_orders": sum(1 for row in rows if row.get("status") == "delivered"),
+        "cancelled_orders": sum(1 for row in rows if row.get("status") == "cancelled"),
+        "revenue_cny": f"{revenue_cny:.2f}",
+        "estimated_profit_cny": f"{estimated_profit_cny:.2f}",
+        "token_budget_cny": f"{token_budget_cny:.2f}",
+        "token_budget_gap_cny": f"{token_budget_gap_cny:.2f}",
+        "token_budget_progress_pct": f"{progress_pct:.2f}",
+    }

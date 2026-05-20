@@ -24,7 +24,7 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 from case_manager import ensure_case_workspace, save_prompt, save_quality_checklist  # type: ignore[import-not-found]  # noqa: E402
 from clean_vtt import clean_vtt_text  # noqa: E402
 from env_config import cookie_status  # noqa: E402
-from order_store import order_id_from_case_id, save_order, update_order_status  # type: ignore[import-not-found]  # noqa: E402
+from order_store import order_id_from_case_id, save_order, summarize_orders, update_order_status  # type: ignore[import-not-found]  # noqa: E402
 
 
 def sanitize_case_id(raw_case_id: str) -> str:
@@ -190,6 +190,22 @@ st.set_page_config(page_title="信息消化器接单操作台", page_icon="BP", 
 
 st.title("信息消化器接单操作台")
 st.caption("本地使用：下载英文字幕、清洗 transcript、生成可复制 Prompt。")
+
+summary = summarize_orders(ORDERS_FILE)
+st.subheader("收入仪表盘")
+metric_cols = st.columns(6)
+metric_cols[0].metric("总订单", summary["total_orders"])
+metric_cols[1].metric("已付款", summary["paid_orders"])
+metric_cols[2].metric("已交付", summary["delivered_orders"])
+metric_cols[3].metric("总收入 RMB", summary["revenue_cny"])
+metric_cols[4].metric("估算利润 RMB", summary["estimated_profit_cny"])
+metric_cols[5].metric("距 $40 成本还差 RMB", summary["token_budget_gap_cny"])
+st.progress(float(summary["token_budget_progress_pct"]) / 100)
+st.caption(
+    f"Token 成本目标：{summary['token_budget_cny']} RMB / 月；"
+    f"当前完成度：{summary['token_budget_progress_pct']}%；"
+    f"已取消订单：{summary['cancelled_orders']}。"
+)
 
 cookie_file, has_cookie = cookie_status()
 cookie_label = "已找到" if has_cookie else "未找到"
