@@ -64,6 +64,17 @@ Bot 回复订单号和案例编号
 你再打开 Streamlit 后台继续人工处理和交付
 ```
 
+后台交付：
+
+```text
+1. 在 Streamlit 里选择对应 case_tg_<chat_id>_<message_id>
+2. 把最终内容保存到该 case 的 delivery.md
+3. 点击“发送 delivery.md 给 Telegram 用户”
+4. 系统会通过 Bot 发回用户，并把订单标记为 delivered
+```
+
+注意：当前交付稿按 Telegram 文本消息发送，建议控制在 3900 字以内；更长内容后续再改为文件发送。
+
 下载字幕：
 
 ```bash

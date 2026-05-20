@@ -25,6 +25,7 @@ from case_manager import ensure_case_workspace, save_prompt, save_quality_checkl
 from clean_vtt import clean_vtt_text  # noqa: E402
 from env_config import cookie_status  # noqa: E402
 from order_store import order_id_from_case_id, save_order, summarize_orders, update_order_status  # type: ignore[import-not-found]  # noqa: E402
+from telegram_bot import get_telegram_bot_token, send_delivery_to_telegram  # type: ignore[import-not-found]  # noqa: E402
 
 
 def sanitize_case_id(raw_case_id: str) -> str:
@@ -283,6 +284,23 @@ if st.button("标记为已交付"):
         st.json(delivered_order)
     except ValueError as exc:
         st.error(str(exc))
+
+st.subheader("1.6 Telegram 交付")
+st.caption("仅适用于通过 Telegram Bot 创建、metadata.json 中带 telegram_chat_id 的订单。")
+if st.button("发送 delivery.md 给 Telegram 用户"):
+    token = get_telegram_bot_token()
+    if not token:
+        st.error("未找到 TELEGRAM_BOT_TOKEN。请先在 .env 中配置 Bot Token。")
+    else:
+        try:
+            delivery_result = send_delivery_to_telegram(case_dir=case_dir, token=token)
+            delivered_order = update_order_status(ORDERS_FILE, order_id, "delivered")
+            st.success("已发送交付稿到 Telegram，并标记订单为 delivered。")
+            st.json({"telegram": delivery_result, "order": delivered_order})
+        except ValueError as exc:
+            st.error(str(exc))
+        except Exception as exc:  # pragma: no cover - UI runtime safety net
+            st.error(f"Telegram 发送失败：{exc}")
 
 st.subheader("2. 下载英文字幕")
 if not shutil.which("yt-dlp"):

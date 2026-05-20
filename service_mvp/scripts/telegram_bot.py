@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from case_manager import ensure_case_workspace, update_metadata
+from case_manager import ensure_case_workspace, read_metadata, update_metadata
 from env_config import load_env
 from order_store import order_id_from_case_id, save_order
 
@@ -130,6 +130,45 @@ def _telegram_api(token: str, method: str, payload: dict[str, Any] | None = None
     request = urllib.request.Request(url, data=data, headers=headers, method="POST" if payload is not None else "GET")
     with urllib.request.urlopen(request, timeout=60) as response:  # nosec: Telegram Bot API endpoint
         return json.loads(response.read().decode("utf-8"))
+
+
+def send_delivery_to_telegram(
+    *,
+    case_dir: Path,
+    token: str,
+    api_func: Any = None,
+) -> dict[str, str | bool]:
+    metadata = read_metadata(case_dir)
+    chat_id = str(metadata.get("telegram_chat_id", "")).strip()
+    if not chat_id:
+        raise ValueError("metadata.json 缺少 telegram_chat_id，无法发送给 Telegram 用户。")
+
+    delivery_file = case_dir / "delivery.md"
+    if not delivery_file.exists():
+        raise ValueError(f"交付稿不存在：{delivery_file}")
+    delivery_text = delivery_file.read_text(encoding="utf-8", errors="ignore").strip()
+    if not delivery_text:
+        raise ValueError(f"交付稿为空：{delivery_file}")
+    if len(delivery_text) > 3900:
+        raise ValueError("交付稿超过 Telegram 单条文本安全长度，请先缩短或后续改为文件发送。")
+
+    api = api_func or _telegram_api
+    response = api(
+        token,
+        "sendMessage",
+        {
+            "chat_id": chat_id,
+            "text": delivery_text,
+            "disable_web_page_preview": True,
+        },
+    )
+    message_id = str((response.get("result") or {}).get("message_id", ""))
+    update_metadata(
+        case_dir,
+        delivery_sent_to_telegram=True,
+        delivery_telegram_message_id=message_id,
+    )
+    return {"ok": bool(response.get("ok")), "chat_id": chat_id, "telegram_message_id": message_id}
 
 
 def _handle_update(token: str, update: dict[str, Any], *, cases_dir: Path, orders_file: Path) -> int | None:
