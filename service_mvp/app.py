@@ -16,12 +16,15 @@ PROJECT_ROOT = SERVICE_ROOT.parent
 SCRIPTS_DIR = SERVICE_ROOT / "scripts"
 CASES_DIR = SERVICE_ROOT / "cases"
 PROMPT_FILE = SERVICE_ROOT / "02_固定Prompt.md"
+TRACKING_DIR = SERVICE_ROOT / "tracking"
+ORDERS_FILE = TRACKING_DIR / "orders.csv"
 
 sys.path.insert(0, str(SCRIPTS_DIR))
 
 from case_manager import ensure_case_workspace, save_prompt, save_quality_checklist  # type: ignore[import-not-found]  # noqa: E402
 from clean_vtt import clean_vtt_text  # noqa: E402
 from env_config import cookie_status  # noqa: E402
+from order_store import order_id_from_case_id, save_order, update_order_status  # type: ignore[import-not-found]  # noqa: E402
 
 
 def sanitize_case_id(raw_case_id: str) -> str:
@@ -133,6 +136,12 @@ def build_prompt(transcript_text: str) -> str:
     return f"{template.rstrip()}\n\n```text\n{transcript_text}\n```"
 
 
+def text_char_count(path: Path) -> int:
+    if not path.exists():
+        return 0
+    return len(path.read_text(encoding="utf-8", errors="ignore"))
+
+
 def render_copy_button(text: str, label: str = "复制完整 Prompt") -> None:
     text_json = json.dumps(text, ensure_ascii=False)
     components.html(
@@ -188,6 +197,10 @@ st.info(f"Cookie 状态：{cookie_label}")
 
 with st.sidebar:
     st.header("订单信息")
+    customer_name = st.text_input("客户名称", value="")
+    customer_contact = st.text_input("客户联系方式", value="")
+    price_cny = st.number_input("成交价格 / 元", min_value=0.0, value=19.9, step=1.0)
+    order_status = st.selectbox("订单状态", ["new", "paid", "processing", "delivered", "cancelled"], index=0)
     youtube_url = st.text_input("YouTube 链接")
     case_id = sanitize_case_id(st.text_input("案例编号", value="case_003"))
     case_title = st.text_input("案例标题", value="")
@@ -201,6 +214,7 @@ transcript_file = case_dir / "transcript.txt"
 note_file = case_dir / "note.md"
 prompt_file = case_dir / "prompt.txt"
 metadata_file = case_dir / "metadata.json"
+order_id = order_id_from_case_id(case_id)
 
 st.subheader("1. 创建案例目录")
 st.code(str(case_dir), language="text")
@@ -220,6 +234,39 @@ if st.button("创建/确认案例目录"):
         ),
         language="text",
     )
+
+st.subheader("1.5 保存/更新订单记录")
+st.caption(f"订单 ID：`{order_id}`；订单表：`{ORDERS_FILE}`")
+if st.button("保存/更新订单"):
+    if not youtube_url.strip():
+        st.error("请先输入 YouTube 链接。")
+    else:
+        ensure_case_workspace(case_dir, youtube_url=youtube_url, case_title=case_title)
+        saved_order = save_order(
+            orders_file=ORDERS_FILE,
+            order_id=order_id,
+            customer_name=customer_name,
+            customer_contact=customer_contact,
+            youtube_url=youtube_url,
+            case_id=case_id,
+            case_title=case_title,
+            price_cny=float(price_cny),
+            status=order_status,
+            case_dir=str(case_dir),
+            transcript_chars=text_char_count(transcript_file),
+            prompt_chars=text_char_count(prompt_file),
+            output_chars=text_char_count(note_file) + text_char_count(case_dir / "delivery.md"),
+        )
+        st.success("订单已保存。")
+        st.json(saved_order)
+
+if st.button("标记为已交付"):
+    try:
+        delivered_order = update_order_status(ORDERS_FILE, order_id, "delivered")
+        st.success("订单已标记为 delivered。")
+        st.json(delivered_order)
+    except ValueError as exc:
+        st.error(str(exc))
 
 st.subheader("2. 下载英文字幕")
 if not shutil.which("yt-dlp"):
