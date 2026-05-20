@@ -13,6 +13,22 @@ service_mvp/tracking/market_metrics.csv
 # Account screenshots and private brand assets
 小红书账号_BytePulse字节脉搏/
 
+# Local AI provider state
+.deepseek/
+
+# Case workspaces may contain customer/source transcripts and generated notes
+service_mvp/cases/case_*/
+
+# Raw Xiaohongshu publishing materials and screenshots
+service_mvp/xiaohongshu/**/IMG_*.PNG
+service_mvp/xiaohongshu/**/final_post/
+service_mvp/xiaohongshu/**/compose_final_post.py
+service_mvp/xiaohongshu/**/ready_to_post/*.jpg
+service_mvp/xiaohongshu/**/ready_to_post/*.png
+service_mvp/xiaohongshu/**/ready_to_post/*.md
+service_mvp/xiaohongshu/**/ready_to_post/add_player_overlay.py
+service_mvp/xiaohongshu/**/ready_to_post/Obsidian 成品的局部放大截图/
+
 # Python / local runtime noise
 __pycache__/
 *.py[cod]
