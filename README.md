@@ -34,9 +34,10 @@ cp .env.example .env
 
 ```text
 YTDLP_COOKIE_FILE=/absolute/path/to/cookies.txt
+TELEGRAM_BOT_TOKEN=123456:telegram_bot_token_from_botfather
 ```
 
-不需要 cookie 时可以留空或不创建 `.env`。
+不需要 cookie 时可以留空或不创建 `.env`。Telegram Bot 不启用时，`TELEGRAM_BOT_TOKEN` 也可以留空。
 
 ### 3. 启动操作台
 
@@ -45,6 +46,23 @@ streamlit run service_mvp/app.py
 ```
 
 ## 命令行用法
+
+启动 Telegram Bot 接单入口：
+
+```bash
+export TELEGRAM_BOT_TOKEN="你的 BotFather Token"
+python service_mvp/scripts/telegram_bot.py
+```
+
+第一版 Bot 的行为：
+
+```text
+用户发送 YouTube 链接
+Bot 自动创建 case_tg_<chat_id>_<message_id>
+Bot 写入 service_mvp/tracking/orders.csv
+Bot 回复订单号和案例编号
+你再打开 Streamlit 后台继续人工处理和交付
+```
 
 下载字幕：
 
