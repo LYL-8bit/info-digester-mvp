@@ -19,6 +19,7 @@ PROMPT_FILE = SERVICE_ROOT / "02_固定Prompt.md"
 
 sys.path.insert(0, str(SCRIPTS_DIR))
 
+from case_manager import ensure_case_workspace, save_prompt, save_quality_checklist  # type: ignore[import-not-found]  # noqa: E402
 from clean_vtt import clean_vtt_text  # noqa: E402
 from env_config import cookie_status  # noqa: E402
 
@@ -198,14 +199,27 @@ with st.sidebar:
 case_dir = CASES_DIR / case_id
 transcript_file = case_dir / "transcript.txt"
 note_file = case_dir / "note.md"
+prompt_file = case_dir / "prompt.txt"
+metadata_file = case_dir / "metadata.json"
 
 st.subheader("1. 创建案例目录")
 st.code(str(case_dir), language="text")
 if st.button("创建/确认案例目录"):
-    case_dir.mkdir(parents=True, exist_ok=True)
-    if case_title and not note_file.exists():
-        note_file.write_text(f"# {case_title}\n\n", encoding="utf-8")
-    st.success("案例目录已就绪。")
+    ensure_case_workspace(case_dir, youtube_url=youtube_url, case_title=case_title)
+    st.success("案例目录已就绪，已保存 source_url.txt / note.md / delivery.md / metadata.json。")
+    st.code(
+        "\n".join(
+            [
+                str(case_dir / "source_url.txt"),
+                str(transcript_file),
+                str(prompt_file),
+                str(note_file),
+                str(case_dir / "delivery.md"),
+                str(metadata_file),
+            ]
+        ),
+        language="text",
+    )
 
 st.subheader("2. 下载英文字幕")
 if not shutil.which("yt-dlp"):
@@ -231,7 +245,7 @@ if st.button("下载字幕"):
     if not youtube_url.strip():
         st.error("请先输入 YouTube 链接。")
     else:
-        case_dir.mkdir(parents=True, exist_ok=True)
+        ensure_case_workspace(case_dir, youtube_url=youtube_url, case_title=case_title)
         command = build_download_command(
             youtube_url=youtube_url.strip(),
             case_dir=case_dir,
@@ -268,6 +282,8 @@ st.subheader("4. 复制 Prompt 到 ChatGPT / Claude")
 if transcript_file.exists():
     transcript_text = transcript_file.read_text(encoding="utf-8", errors="ignore")
     complete_prompt = build_prompt(transcript_text)
+    save_prompt(prompt_text=complete_prompt, case_dir=case_dir)
+    st.success(f"已保存完整 Prompt：{prompt_file}")
     render_copy_button(complete_prompt)
     st.download_button(
         "下载完整 Prompt.txt",
@@ -280,12 +296,20 @@ else:
     st.write("生成 `transcript.txt` 后，这里会出现完整 Prompt。")
 
 st.subheader("5. 交付检查")
-st.checkbox("一句话总结不超过 60 字")
-st.checkbox("是否值得看有明确判断")
-st.checkbox("没有编造时间戳")
-st.checkbox("没有编造命令")
-st.checkbox("Markdown 表格正常")
-st.checkbox("可以直接复制到 Obsidian / Notion / 微信")
+quality_checklist = {
+    "summary_under_60_chars": st.checkbox("一句话总结不超过 60 字"),
+    "has_clear_watch_judgement": st.checkbox("是否值得看有明确判断"),
+    "no_fake_timestamps": st.checkbox("没有编造时间戳"),
+    "no_fake_commands": st.checkbox("没有编造命令"),
+    "markdown_table_ok": st.checkbox("Markdown 表格正常"),
+    "ready_for_obsidian_notion_wechat": st.checkbox("可以直接复制到 Obsidian / Notion / 微信"),
+}
+if st.button("保存交付检查结果"):
+    if not case_dir.exists():
+        st.error("请先创建案例目录。")
+    else:
+        save_quality_checklist(case_dir, quality_checklist)
+        st.success(f"已保存到 metadata.json：{metadata_file}")
 
 st.subheader("6. 小红书发布提醒")
 st.markdown(
