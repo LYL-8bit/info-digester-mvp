@@ -11,6 +11,7 @@ from telegram_bot import (  # type: ignore[import-not-found]
     extract_youtube_url,
     get_telegram_bot_token,
     send_delivery_to_telegram,
+    handle_telegram_message,
 )
 from order_store import read_orders  # type: ignore[import-not-found]
 from case_manager import read_metadata  # type: ignore[import-not-found]
@@ -73,6 +74,39 @@ def test_accept_telegram_order_creates_case_and_order(tmp_path):
     assert orders[0]["customer_contact"] == "telegram:@alice"
     assert orders[0]["status"] == "new"
     assert orders[0]["price_cny"] == "0.00"
+
+
+def test_handle_telegram_message_auto_processes_and_sends_delivery(tmp_path):
+    calls = []
+
+    def fake_api(token, method, payload=None):
+        calls.append((method, payload))
+        return {"ok": True, "result": {"message_id": len(calls)}}
+
+    def fake_process(youtube_url, case_dir):
+        (case_dir / "delivery.md").write_text("# 自动笔记\n\n完成。", encoding="utf-8")
+        return type("Result", (), {"ok": True, "error": ""})()
+
+    result = handle_telegram_message(
+        token="tg-token",
+        text="https://youtu.be/abc123",
+        chat_id=10001,
+        message_id=99,
+        username="alice",
+        full_name="Alice Zhang",
+        cases_dir=tmp_path / "cases",
+        orders_file=tmp_path / "tracking" / "orders.csv",
+        api_func=fake_api,
+        process_func=fake_process,
+    )
+
+    assert result.accepted is True
+    assert result.order_id == "ord_tg_10001_99"
+    assert [method for method, _payload in calls] == ["sendMessage", "sendMessage", "sendMessage"]
+    assert "正在自动处理" in calls[1][1]["text"]
+    assert calls[2][1]["text"] == "# 自动笔记\n\n完成。"
+    orders = read_orders(tmp_path / "tracking" / "orders.csv")
+    assert orders[0]["status"] == "delivered"
 
 
 def test_send_delivery_to_telegram_sends_delivery_and_updates_metadata(tmp_path):

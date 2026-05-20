@@ -35,6 +35,11 @@ cp .env.example .env
 ```text
 YTDLP_COOKIE_FILE=/absolute/path/to/cookies.txt
 TELEGRAM_BOT_TOKEN=123456:telegram_bot_token_from_botfather
+OPENAI_COMPATIBLE_BASE_URL=https://api.deepseek.com
+OPENAI_COMPATIBLE_API_KEY=your_ai_api_key
+OPENAI_COMPATIBLE_MODEL=deepseek-chat
+OPENAI_COMPATIBLE_TEMPERATURE=0.2
+OPENAI_COMPATIBLE_MAX_TOKENS=4096
 ```
 
 不需要 cookie 时可以留空或不创建 `.env`。Telegram Bot 不启用时，`TELEGRAM_BOT_TOKEN` 也可以留空。
@@ -61,8 +66,11 @@ python service_mvp/scripts/telegram_bot.py
 Bot 自动创建 case_tg_<chat_id>_<message_id>
 Bot 写入 service_mvp/tracking/orders.csv
 Bot 回复订单号和案例编号
-你再打开 Streamlit 后台继续人工处理和交付
+Bot 自动下载英文字幕、清洗字幕、调用 OpenAI-compatible API 生成中文 Markdown
+Bot 自动把中文笔记发回用户，并把订单标记为 delivered
 ```
+
+如果没有配置 `OPENAI_COMPATIBLE_API_KEY`，Bot 仍会接单，但会回复自动处理失败提示；配置 API Key 后才是真正全自动。
 
 后台交付：
 

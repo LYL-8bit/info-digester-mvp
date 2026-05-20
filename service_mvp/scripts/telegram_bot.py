@@ -11,7 +11,9 @@ from typing import Any
 
 from case_manager import ensure_case_workspace, read_metadata, update_metadata
 from env_config import load_env
-from order_store import order_id_from_case_id, save_order
+from order_store import order_id_from_case_id, save_order, update_order_status
+from ai_client import get_ai_config
+from auto_processor import process_youtube_to_markdown
 
 SERVICE_ROOT = Path(__file__).resolve().parents[1]
 CASES_DIR = SERVICE_ROOT / "cases"
@@ -149,19 +151,20 @@ def send_delivery_to_telegram(
     delivery_text = delivery_file.read_text(encoding="utf-8", errors="ignore").strip()
     if not delivery_text:
         raise ValueError(f"交付稿为空：{delivery_file}")
-    if len(delivery_text) > 3900:
-        raise ValueError("交付稿超过 Telegram 单条文本安全长度，请先缩短或后续改为文件发送。")
 
     api = api_func or _telegram_api
-    response = api(
-        token,
-        "sendMessage",
-        {
-            "chat_id": chat_id,
-            "text": delivery_text,
-            "disable_web_page_preview": True,
-        },
-    )
+    chunks = [delivery_text[index : index + 3900] for index in range(0, len(delivery_text), 3900)]
+    response: dict[str, Any] = {"ok": False, "result": {}}
+    for chunk in chunks:
+        response = api(
+            token,
+            "sendMessage",
+            {
+                "chat_id": chat_id,
+                "text": chunk,
+                "disable_web_page_preview": True,
+            },
+        )
     message_id = str((response.get("result") or {}).get("message_id", ""))
     update_metadata(
         case_dir,
@@ -169,6 +172,61 @@ def send_delivery_to_telegram(
         delivery_telegram_message_id=message_id,
     )
     return {"ok": bool(response.get("ok")), "chat_id": chat_id, "telegram_message_id": message_id}
+
+
+def handle_telegram_message(
+    *,
+    token: str,
+    text: str,
+    chat_id: int | str,
+    message_id: int | str,
+    username: str = "",
+    full_name: str = "",
+    cases_dir: Path = CASES_DIR,
+    orders_file: Path = ORDERS_FILE,
+    api_func: Any = None,
+    process_func: Any = None,
+) -> TelegramOrderResult:
+    api = api_func or _telegram_api
+    result = accept_telegram_order(
+        text=text,
+        chat_id=chat_id,
+        message_id=message_id,
+        username=username,
+        full_name=full_name,
+        cases_dir=cases_dir,
+        orders_file=orders_file,
+    )
+    api(token, "sendMessage", {"chat_id": chat_id, "text": result.reply_text})
+    if not result.accepted:
+        return result
+
+    api(
+        token,
+        "sendMessage",
+        {
+            "chat_id": chat_id,
+            "text": "正在自动处理：下载字幕、生成中文 Markdown，预计 1-3 分钟。",
+        },
+    )
+    case_dir = Path(result.case_dir)
+    try:
+        if process_func:
+            process_result = process_func(result.youtube_url, case_dir)
+        else:
+            process_result = process_youtube_to_markdown(
+                youtube_url=result.youtube_url,
+                case_dir=case_dir,
+                ai_config=get_ai_config(),
+            )
+        if not process_result.ok:
+            raise RuntimeError(process_result.error or "自动处理失败。")
+        send_delivery_to_telegram(case_dir=case_dir, token=token, api_func=api)
+        update_order_status(orders_file, result.order_id, "delivered")
+    except Exception as exc:
+        update_metadata(case_dir, status="auto_failed", auto_error=str(exc))
+        api(token, "sendMessage", {"chat_id": chat_id, "text": f"自动处理失败：{exc}"})
+    return result
 
 
 def _handle_update(token: str, update: dict[str, Any], *, cases_dir: Path, orders_file: Path) -> int | None:
@@ -184,7 +242,8 @@ def _handle_update(token: str, update: dict[str, Any], *, cases_dir: Path, order
     full_name = " ".join(
         part for part in [from_user.get("first_name", ""), from_user.get("last_name", "")] if part
     )
-    result = accept_telegram_order(
+    handle_telegram_message(
+        token=token,
         text=text,
         chat_id=chat_id,
         message_id=message_id,
@@ -193,7 +252,6 @@ def _handle_update(token: str, update: dict[str, Any], *, cases_dir: Path, order
         cases_dir=cases_dir,
         orders_file=orders_file,
     )
-    _telegram_api(token, "sendMessage", {"chat_id": chat_id, "text": result.reply_text})
     return update.get("update_id")
 
 
