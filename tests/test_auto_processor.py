@@ -7,7 +7,7 @@ SCRIPTS_DIR = Path(__file__).resolve().parents[1] / "service_mvp" / "scripts"
 sys.path.insert(0, str(SCRIPTS_DIR))
 
 from ai_client import OpenAICompatibleConfig  # type: ignore[import-not-found]
-from auto_processor import process_youtube_to_markdown  # type: ignore[import-not-found]
+from auto_processor import download_subtitle, process_youtube_to_markdown  # type: ignore[import-not-found]
 from case_manager import read_metadata  # type: ignore[import-not-found]
 
 
@@ -67,3 +67,25 @@ def test_process_youtube_to_markdown_fails_when_no_subtitle(tmp_path):
 
     assert result.ok is False
     assert "字幕" in result.error
+
+
+def test_download_subtitle_reports_youtube_bot_check_instead_of_no_subtitle(tmp_path):
+    class FakeCompletedProcess:
+        stdout = ""
+        stderr = "Sign in to confirm you’re not a bot. Use --cookies for the authentication."
+
+    def fake_run(command, cwd, capture_output, text, check):
+        return FakeCompletedProcess()
+
+    try:
+        download_subtitle(
+            "https://youtu.be/abc123",
+            tmp_path,
+            subprocess_func=fake_run,
+            yt_dlp_path="/usr/bin/yt-dlp",
+        )
+    except RuntimeError as exc:
+        assert "YouTube 要求登录验证" in str(exc)
+        assert "YTDLP_COOKIE_FILE" in str(exc)
+    else:
+        raise AssertionError("download_subtitle should raise when YouTube bot check is detected")

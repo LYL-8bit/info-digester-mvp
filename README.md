@@ -37,7 +37,7 @@ YTDLP_COOKIE_FILE=/absolute/path/to/cookies.txt
 TELEGRAM_BOT_TOKEN=123456:telegram_bot_token_from_botfather
 OPENAI_COMPATIBLE_BASE_URL=https://api.deepseek.com
 OPENAI_COMPATIBLE_API_KEY=your_ai_api_key
-OPENAI_COMPATIBLE_MODEL=deepseek-chat
+OPENAI_COMPATIBLE_MODEL=deepseek-v4-flash
 OPENAI_COMPATIBLE_TEMPERATURE=0.2
 OPENAI_COMPATIBLE_MAX_TOKENS=4096
 ```
