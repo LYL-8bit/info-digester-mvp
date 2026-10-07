@@ -10,7 +10,7 @@
 - 清洗 `.vtt` 字幕为 `transcript.txt`
 - 根据固定 Prompt 生成中文 Markdown 笔记
 - Streamlit 本地操作台
-- 小红书推广素材与接单 SOP
+- 接单 SOP（运营材料见 `docs/business/`）
 
 ## 快速启动
 
@@ -103,7 +103,6 @@ service_mvp/
   scripts/                       字幕下载、清洗、环境变量工具
   cases/                         案例/交付样例
   tracking/                      运营记录模板
-  xiaohongshu/                   小红书发布素材
   01_服务SOP.md                  接单 SOP
   02_固定Prompt.md               笔记生成 Prompt
   03_交付模板.md                 客户交付模板
